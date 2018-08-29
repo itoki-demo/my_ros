@@ -1,0 +1,3 @@
+<launch>
+    <node name="switchbot_controller" pkg="switchbot" type="switchbot_action.py" output="screen" args="$(find switchbot)/src/switchbot_action.py"/>
+</launch>
