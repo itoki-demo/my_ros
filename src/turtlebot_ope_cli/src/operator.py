@@ -6,18 +6,24 @@ import actionlib
 from smach import State,StateMachine
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import String
-import time
+import json
 
-#目標地点リスト　名前, 座標, 向き
-room_waypoints = {
-    "Room01":[["door_key_1", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, 0.988802450802)],
-              ["room", ( 2.9,  0.0), (0.0, 0.0, 0.974797896522, 0.223089804646)],
-              ["door_key_2", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, -0.988802450802)]],
-    "Room02":[["door_free_1", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, 0.988802450802)],
-              ["room", ( 2.9,  0.0), (0.0, 0.0, 0.974797896522, 0.223089804646)],
-              ["door_free_2", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, -0.988802450802)]]
-}
-initialpoint = [(-1.09, 2.48), (0.0, 0.0, -0.739811508606, 0.672814188119)]
+#目標地点リスト　名前, 座標, 向き jsonファイルで読み込み
+room_waypoints_jsonfile_path = "../maps/modified_lobby_waypoints.json"
+with open(room_waypoints_jsonfile_path) as f:
+    df = json.load(f)
+initial_point = df["initial_point"]
+room_waypoints = df["room_waypoints"]
+
+#room_waypoints = {
+#    "Room01":[["door_key_1", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, 0.988802450802)],
+#              ["room", ( 2.9,  0.0), (0.0, 0.0, 0.974797896522, 0.223089804646)],
+#              ["door_key_2", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, -0.988802450802)]],
+#    "Room02":[["door_free_1", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, 0.988802450802)],
+#              ["room", ( 2.9,  0.0), (0.0, 0.0, 0.974797896522, 0.223089804646)],
+#              ["door_free_2", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, -0.988802450802)]]
+#}
+#initialpoint = [(-1.09, 2.48), (0.0, 0.0, -0.739811508606, 0.672814188119)]
 
 #waypoints = [
 #    ["Room01", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, 0.988802450802)],
@@ -43,7 +49,7 @@ class Waypoint(State):
         self.goal.target_pose.header.frame_id = 'map'
         self.goal.target_pose.pose.position.x = position[0]
         self.goal.target_pose.pose.position.y = position[1]
-        self.goal.target_pose.pose.position.z = 0.0
+        self.goal.target_pose.pose.position.z = position[2]
         self.goal.target_pose.pose.orientation.x = orientation[0]
         self.goal.target_pose.pose.orientation.y = orientation[1]
         self.goal.target_pose.pose.orientation.z = orientation[2]
@@ -98,7 +104,7 @@ class MoveToRoom(State):
     def execute(self,userdata):
         return 'success'
 
-if __name__ == '__main__':
+def main():
     rospy.init_node('operator')
     operator = StateMachine(['success','reception','move_to_reception'] + room_names)
     reception_transitions={}
@@ -106,7 +112,10 @@ if __name__ == '__main__':
         reception_transitions[r] = r
     with operator:
         #受けつけ、受付まで移動状態を追加
-        StateMachine.add('move_to_reception',Waypoint(initialpoint[0], initialpoint[1], 'reception'),
+        StateMachine.add('move_to_reception',
+                         Waypoint(initialpoint["position"],
+                                  initialpoint["orientation"],
+                                  'reception'),
                          transitions={'success':'reception'})
         StateMachine.add('reception',Reception(),
                          transitions=reception_transitions)
@@ -115,26 +124,34 @@ if __name__ == '__main__':
             waypoints = room_waypoints[r]
             next_move_state_names = []# [Room01_door_key_1, Room01_room]
             next_wait_state_names = []# [Room01_door_key_1_wait, Room01_room_wait]
-            for i,w in enumerate(waypoints):
-                    next_move_state_names.append(r+'_'+w[0])
-                    next_wait_state_names.append(r+'_'+w[0]+'_wait')
+            for w_n in waypoints:
+                    next_move_state_names.append(r+'_'+w_n)
+                    next_wait_state_names.append(r+'_'+w_n+'_wait')
             operator.register_outcomes(next_move_state_names+next_wait_state_names)
 
             StateMachine.add(r,MoveToRoom(),transitions={'success':next_move_state_names[0]})
-            for i,w in enumerate(waypoints):
+            for i, (w_n,w) in enumerate(waypoints.items()):
                 if i < len(waypoints) - 1:
                     StateMachine.add(next_move_state_names[i],
-                                     Waypoint(w[1], w[2], next_move_state_names[i]),
+                                     Waypoint(w["position"],
+                                              w["orientation"], 
+                                              next_move_state_names[i]),
                                      transitions={'success':next_wait_state_names[i]})
                     StateMachine.add(next_wait_state_names[i],
                                      WaitStartFlag(),
                                      transitions={'success':next_move_state_names[i+1]})
                 else:
                     StateMachine.add(next_move_state_names[i],
-                                     Waypoint(w[1], w[2], next_move_state_names[i]),
+                                     Waypoint(w["position"],
+                                              w["orientation"], 
+                                              next_move_state_names[i]),
                                      transitions={'success':next_wait_state_names[i]})
                     StateMachine.add(next_wait_state_names[i],
                                      WaitStartFlag(),
                                      transitions={'success':'move_to_reception'})
     operator.execute()
-    
+    return
+
+if __name__ == '__main__':
+    main()
+
