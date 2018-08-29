@@ -18,7 +18,7 @@ if(file_exists($rpath)){
 	$data_json = json_decode($contents, true);
 	$rpath = fopen($rpath, "w");
 	fwrite($rpath, $data_json['b_RoomName']);
-	fclose();
+	fclose($rpath);
 }
 
 ?>
