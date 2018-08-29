@@ -40,13 +40,18 @@ class main:
         while not rospy.is_shutdown():
             #目標地点名をサーバから受け取る
             while not rospy.is_shutdown():
-                str_in = requests.post(self.url_roomname).text.replace('\n','').replace('\r','')
-                if (str_in!='no goal'):
-                    rospy.loginfo("next_goal is {}".format(str_in))
+                response = requests.post(self.url_roomname).text.replace('\n','').replace('\r','')
+                if (response!='no goal'):
+                    rospy.loginfo("next_goal is {}".format(response))
                     break
                 r.sleep()
                 rospy.loginfo("no goal")
-            pub_goal.publish(str_in)
+            while not rospy.is_shutdown():
+                response = requests.post(self.url_get_status).text.replace('\n','').replace('\r','')
+                if (response=='navigation'):
+                    break
+                r.sleep()
+            pub_goal.publish(response)
             #到達待ち
             while not rospy.is_shutdown():
                 sub = rospy.Subscriber('turtlebot_status', String, self.callback)#'/move_base/status',GoalStatusArray, callback)
@@ -63,8 +68,8 @@ class main:
 
                 #iPadからの入力待ち
                 while not rospy.is_shutdown():
-                    str_in = requests.post(self.url_get_status).text.replace('\n','').replace('\r','')
-                    if (str_in=='navigation'):
+                    response = requests.post(self.url_get_status).text.replace('\n','').replace('\r','')
+                    if (response=='navigation'):
                         break
                     r.sleep()
                     rospy.loginfo("waiting for input from iPad")
