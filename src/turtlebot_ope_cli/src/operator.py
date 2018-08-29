@@ -9,7 +9,7 @@ from std_msgs.msg import String
 import json
 
 #目標地点リスト　名前, 座標, 向き jsonファイルで読み込み
-room_waypoints_jsonfile_path = "../maps/modified_lobby_waypoints.json"
+room_waypoints_jsonfile_path = "/home/a-mizutani/workspace/src/teleop_bot/maps/modified_lobby_waypoints.json"
 with open(room_waypoints_jsonfile_path) as f:
     df = json.load(f)
 initial_point = df["initial_point"]
@@ -113,8 +113,8 @@ def main():
     with operator:
         #受けつけ、受付まで移動状態を追加
         StateMachine.add('move_to_reception',
-                         Waypoint(initialpoint["position"],
-                                  initialpoint["orientation"],
+                         Waypoint(initial_point["position"],
+                                  initial_point["orientation"],
                                   'reception'),
                          transitions={'success':'reception'})
         StateMachine.add('reception',Reception(),
