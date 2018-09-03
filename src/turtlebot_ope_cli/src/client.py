@@ -4,7 +4,7 @@ import requests
 import rospy
 from std_msgs.msg import String
 
-class main:
+class client:
     def __init__(self):
         self.callback_flag = 0
         host = '192.168.20.42' #サーバのIPアドレス
@@ -13,7 +13,7 @@ class main:
         self.url_roomname = 'http://{}/{}'.format(host,server_roomname)#目標地点名受け取りURL
 
         server_update_status   = 'update_status.php'
-        self.status_update_status = 'arrived'
+        self.status_update_status = 'reception'
         self.url_update_status = 'http://{}/{}?status='.format(host,server_update_status)#到達情報送信URL
 
         server_get_status   = 'get_status.php'
@@ -32,17 +32,18 @@ class main:
         self.status_update_status = msg.data
         self.callback_flag=1
 
-    def Main(self):
+    def Client(self):
         rospy.init_node('client')
-        pub_goal=rospy.Publisher('next_goal', String)
-        pub_start=rospy.Publisher('start_flag', String)
+        pub_goal=rospy.Publisher('next_goal', String, queue_size = 10)
+        pub_start=rospy.Publisher('start_flag', String, queue_size = 10)
         r = rospy.Rate(0.5)
+        requests.post(self.url_update_status+self.status_update_status)
         while not rospy.is_shutdown():
             #目標地点名をサーバから受け取る
             while not rospy.is_shutdown():
-                response = requests.post(self.url_roomname).text.replace('\n','').replace('\r','')
-                if (response!='no goal'):
-                    rospy.loginfo("next_goal is {}".format(response))
+                room_name = requests.post(self.url_roomname).text.replace('\n','').replace('\r','')
+                if (room_name!='no goal'):
+                    rospy.loginfo("next_goal is {}".format(room_name))
                     break
                 r.sleep()
                 rospy.loginfo("no goal")
@@ -51,7 +52,7 @@ class main:
                 if (response=='navigation'):
                     break
                 r.sleep()
-            pub_goal.publish(response)
+            pub_goal.publish(room_name)
             #到達待ち
             while not rospy.is_shutdown():
                 sub = rospy.Subscriber('turtlebot_status', String, self.callback)#'/move_base/status',GoalStatusArray, callback)
@@ -77,7 +78,7 @@ class main:
         return
 
 if __name__ == '__main__':
-    a = main()
-    a.Main()
+    a = client()
+    a.Client()
 
 
