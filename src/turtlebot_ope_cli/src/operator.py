@@ -147,10 +147,11 @@ def main():
             next_move_state_names = []# [Navigate_Room01_door_key_1, Room01_room]
             next_wait_state_names = []# [Navigate_Room01_door_key_1_wait, Room01_room_wait]
             for w_n in waypoints:
-                    next_move_state_names.append(r+'_'+w_n)#Navigate_
-                    next_wait_state_names.append(r+'_'+w_n+'_wait')#Navigate_
-                    rospy.loginfo(r+'_'+w_n)#Navigate_
+                    next_move_state_names.append('Navigate_'+r+'_'+w_n)#Navigate_
+                    next_wait_state_names.append('Navigate_'+r+'_'+w_n+'_wait')#Navigate_
+                    rospy.loginfo('Navigate_'+r+'_'+w_n)#Navigate_
             operator.register_outcomes(next_move_state_names+next_wait_state_names)
+            next_move_state_names.append('move_to_reception')
 
             StateMachine.add(r,MoveToRoom(),transitions={'success':next_move_state_names[0]})
             for i, (w_n,w) in enumerate(waypoints.items()):
@@ -160,6 +161,9 @@ def main():
                                      Waypoint(w["position"],
                                               w["orientation"]),
                                      transitions={'success':next_wait_state_names[i]})
+                    StateMachine.add(next_wait_state_names[i],
+                                     WaitStartFlag(next_move_state_names[i]),
+                                     transitions={'success':next_move_state_names[i+1]})
                 elif(w_n_split[0] == "door"):
                     if(w_n_split[1] == "areascan"):
                         areascan_state_scan_name = next_move_state_names[i] + "_scan"
@@ -180,21 +184,14 @@ def main():
                         StateMachine.add(areascan_state_scan_name,
                                          AreaScan(),
                                          transitions={'success':next_move_state_names[i+1]})
-
-                        continue
                     else:
                         StateMachine.add(next_move_state_names[i],
                                          Waypoint(w[0]["position"],
                                                   w[0]["orientation"]),
                                          transitions={'success':next_wait_state_names[i]})
-                if i < len(waypoints) - 1:
-                    StateMachine.add(next_wait_state_names[i],
-                                     WaitStartFlag(next_move_state_names[i]),
-                                     transitions={'success':next_move_state_names[i+1]})
-                else:
-                    StateMachine.add(next_wait_state_names[i],
-                                     WaitStartFlag(next_move_state_names[i]),
-                                     transitions={'success':'move_to_reception'})
+                        StateMachine.add(next_wait_state_names[i],
+                                         WaitStartFlag(next_move_state_names[i]),
+                                         transitions={'success':next_move_state_names[i+1]})
     operator.execute()
     return
 
