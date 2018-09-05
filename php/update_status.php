@@ -1,6 +1,6 @@
 <?php
-ini_set("display_errors", 1);
-error_reporting(E_ALL);
+//ini_set("display_errors", 1);
+//error_reporting(E_ALL);
 $fpath = "status.txt";
 if(isset($_GET['status'])){
 	$status = $_GET['status'];
