@@ -11,7 +11,7 @@ import collections
 
 #目標地点リスト　名前, 座標, 向き jsonファイルで読み込み
 decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
-room_waypoints_jsonfile_path = "/home/a-mizutani/workspace/src/teleop_bot/maps/modified_lobby_waypoints.json"
+room_waypoints_jsonfile_path = "/home/turtlebot/catkin_ws/src/icclab_turtlebot/maps/modified_lobby_waypoints.json"
 with open(room_waypoints_jsonfile_path) as f:
     df = decoder.decode(f.read())
 initial_point = df["initial_point"]
@@ -111,21 +111,22 @@ class MoveToRoom(State):
 
 #AreaScanをして扉が開いているかどうか判断する
 class AreaScan(State):
-    def __init__(self):
+    def __init__(self, room):
         State.__init__(self,outcomes=['success'])
-        self.areascan_count = 0
+	self.pub = rospy.Publisher('call_area_scan', String, queue_size = 10)
+        self.callback_flag = 0
         self.r = rospy.Rate(10)
+	self.room = room
     def execute(self,userdata):
-        sub = rospy.Subscriber('area_scan', Int32, self.callback)
-        while(self.areascan_count < 10):
+	self.pub.publish(self.room)
+        sub = rospy.Subscriber('area_scan', String, self.callback)
+        while(self.callback_flag):
             self.r.sleep()
-        self.areascan_count = 0
+        self.callback_flag = 0
         return 'success'
     def callback(self,msg):
-        if(msg.data < 1):
-            self.areascan_count += 1
-        else:
-            self.areascan_count = 0
+        if(msg.data == "True"):
+            self.callback_flag = 1
 
 def main():
     rospy.init_node('operator')
@@ -182,7 +183,7 @@ def main():
                                                   w[1]["orientation"]),
                                          transitions={'success':areascan_state_scan_name})
                         StateMachine.add(areascan_state_scan_name,
-                                         AreaScan(),
+                                         AreaScan(r),
                                          transitions={'success':next_move_state_names[i+1]})
                     else:
                         StateMachine.add(next_move_state_names[i],
