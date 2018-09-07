@@ -4,9 +4,10 @@ import requests
 import rospy
 from std_msgs.msg import String
 
-class client:
+class Client:
     def __init__(self):
         self.callback_flag = 0
+        self.node_name = "client"
         host = '192.168.20.42' #サーバのIPアドレス
         server_roomname = 'room_name.php'
         status_roomname=''
@@ -32,10 +33,10 @@ class client:
         self.status_update_status = msg.data
         self.callback_flag=1
 
-    def Client(self):
-        rospy.init_node('client')
-        pub_goal=rospy.Publisher('next_goal', String, queue_size = 10)
-        pub_start=rospy.Publisher('start_flag', String, queue_size = 10)
+    def client(self):
+        rospy.init_node(node_name)
+        pub_goal=rospy.Publisher(node_name + '/next_goal', String, queue_size = 10)
+        pub_start=rospy.Publisher(node_name + '/start_flag', String, queue_size = 10)
         r = rospy.Rate(0.5)
         requests.post(self.url_update_status+self.status_update_status)
         while not rospy.is_shutdown():
@@ -55,7 +56,7 @@ class client:
             pub_goal.publish(room_name)
             #到達待ち
             while not rospy.is_shutdown():
-                sub = rospy.Subscriber('turtlebot_status', String, self.callback)#'/move_base/status',GoalStatusArray, callback)
+                sub = rospy.Subscriber('operator/turtlebot_status', String, self.callback)#'/move_base/status',GoalStatusArray, callback)
 
                 while(self.callback_flag == 0):
                     rospy.loginfo("navigation")
@@ -78,7 +79,7 @@ class client:
         return
 
 if __name__ == '__main__':
-    a = client()
-    a.Client()
+    a = Client()
+    a.client()
 
 
