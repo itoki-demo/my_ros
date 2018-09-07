@@ -1,0 +1,3 @@
+<launch>
+  <node name="area_scanner" pkg="icclab_turtlebot" type="area_scanner.py" args="$(find icclab_turtlebot)/src/area_scanner.py" output="screen"/>
+</launch>
