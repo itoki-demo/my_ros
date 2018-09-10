@@ -4,10 +4,11 @@ import requests
 import rospy
 from std_msgs.msg import String
 
+NODE_NAME = "client"
+
 class Client:
     def __init__(self):
         self.callback_flag = 0
-        self.node_name = "client"
         host = '192.168.20.42' #サーバのIPアドレス
         server_roomname = 'room_name.php'
         status_roomname=''
@@ -34,9 +35,9 @@ class Client:
         self.callback_flag=1
 
     def run(self):
-        rospy.init_node(self.node_name)
-        pub_goal=rospy.Publisher(self.node_name + '/next_goal', String, queue_size = 10)
-        pub_start=rospy.Publisher(self.node_name + '/start_flag', String, queue_size = 10)
+        rospy.init_node(NODE_NAME)
+        pub_goal=rospy.Publisher(NODE_NAME + '/next_goal', String, queue_size = 10)
+        pub_start=rospy.Publisher(NODE_NAME + '/start_flag', String, queue_size = 10)
         r = rospy.Rate(0.5)
         requests.post(self.url_update_status+self.status_update_status)
         while not rospy.is_shutdown():
