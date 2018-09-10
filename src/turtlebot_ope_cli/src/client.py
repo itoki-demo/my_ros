@@ -33,10 +33,10 @@ class Client:
         self.status_update_status = msg.data
         self.callback_flag=1
 
-    def client(self):
-        rospy.init_node(node_name)
-        pub_goal=rospy.Publisher(node_name + '/next_goal', String, queue_size = 10)
-        pub_start=rospy.Publisher(node_name + '/start_flag', String, queue_size = 10)
+    def run(self):
+        rospy.init_node(self.node_name)
+        pub_goal=rospy.Publisher(self.node_name + '/next_goal', String, queue_size = 10)
+        pub_start=rospy.Publisher(self.node_name + '/start_flag', String, queue_size = 10)
         r = rospy.Rate(0.5)
         requests.post(self.url_update_status+self.status_update_status)
         while not rospy.is_shutdown():
@@ -80,6 +80,6 @@ class Client:
 
 if __name__ == '__main__':
     a = Client()
-    a.client()
+    a.run()
 
 

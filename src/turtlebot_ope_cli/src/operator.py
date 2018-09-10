@@ -9,9 +9,9 @@ from std_msgs.msg import String, Int32
 import json
 import collections
 
-import roslib; roslib.load_manifest('kobuki_auto_docking')
-from kobuki_msgs.msg import AutoDockingAction, AutoDockingGoal
-from actionlib_msgs.msg import GoalStatus
+#import roslib; roslib.load_manifest('kobuki_auto_docking')
+#from kobuki_msgs.msg import AutoDockingAction, AutoDockingGoal
+#from actionlib_msgs.msg import GoalStatus
 
 node_name = "operator"
 #目標地点リスト　名前, 座標, 向き jsonファイルで読み込み
@@ -134,24 +134,25 @@ class AreaScan(State):
             self.callback_flag = 1
 
 #充電ドックへ自動移動
-class AutoDock(State):
+#class AutoDock(State):
+#    def __init__(self):
+#        State.__init__(self,outcomes=['success'])
+#    def execute(self,userdata):
+#        # add timeout setting
+#        client = actionlib.SimpleActionClient('dock_drive_action', AutoDockingAction)
+#        client.wait_for_server()
+
+#        goal = AutoDockingGoal();
+#        client.send_goal(goal)
+#        rospy.on_shutdown(client.cancel_goal)
+#        client.wait_for_result()
+#        return 'success'
+
+
+class Operator:       
     def __init__(self):
-        State.__init__(self,outcomes=['success'])
-    def execute(self,userdata):
-        # add timeout setting
-        client = actionlib.SimpleActionClient('dock_drive_action', AutoDockingAction)
-        client.wait_for_server()
-
-        goal = AutoDockingGoal();
-        client.send_goal(goal)
-        rospy.on_shutdown(client.cancel_goal)
-        client.wait_for_result()
-        return 'success'
-
-
-class Operator:
-    def __init__(self):
-        self.operator = StateMachine(['success','reception','auto_dock','move_to_reception'] + room_names)
+        rospy.init_node(node_name)
+        self.operator = StateMachine(['success','reception','move_to_reception'] + room_names)
         reception_transitions={}
         for r in room_names:
             reception_transitions[r] = r
@@ -160,8 +161,6 @@ class Operator:
             StateMachine.add('move_to_reception',
                              Waypoint(initial_point["position"],
                                       initial_point["orientation"]),
-                             transitions={'success':'auto_dock'})
-            StateMachine.add('auto_dock',AutoDock(),
                              transitions={'success':'reception'})
             StateMachine.add('reception',Reception(),
                              transitions=reception_transitions)
@@ -216,12 +215,11 @@ class Operator:
                             StateMachine.add(next_wait_state_names[i],
                                              WaitStartFlag(next_move_state_names[i]),
                                              transitions={'success':next_move_state_names[i+1]})
-    def operator(self):
-        rospy.init_node(self.node_name)
+    def run(self):
         self.operator.execute()
         return
 
 if __name__ == '__main__':
     a = Operator()
-    a.operator()
+    a.run()
 
