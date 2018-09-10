@@ -1,0 +1,3 @@
+<launch>
+  <node name="operator" pkg="icclab_turtlebot" type="operator.py" args="$(find icclab_turtlebot)/src/operator.py" output="screen"/>
+</launch>

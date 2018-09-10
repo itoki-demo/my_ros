@@ -1,0 +1,3 @@
+<launch>
+  <node name="client" pkg="icclab_turtlebot" type="client.py" args="$(find icclab_turtlebot)/src/client.py" output="screen"/>
+</launch>
