@@ -38,7 +38,7 @@ class Client:
         rospy.init_node(NODE_NAME)
         pub_goal=rospy.Publisher(NODE_NAME + '/next_goal', String, queue_size = 10)
         pub_start=rospy.Publisher(NODE_NAME + '/start_flag', String, queue_size = 10)
-        r = rospy.Rate(0.5)
+        r = rospy.Rate(2)
         requests.post(self.url_update_status+self.status_update_status)
         while not rospy.is_shutdown():
             #目標地点名をサーバから受け取る

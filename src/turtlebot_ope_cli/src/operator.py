@@ -71,17 +71,17 @@ class Waypoint(State):
 class Reception(State):
     def __init__(self):
         State.__init__(self,outcomes=room_names)
-        self.callback_flag= 0
+        self.callback_flag = 0
         self.next_goal = ''
-        self.r = rospy.Rate(1)
+        self.r = rospy.Rate(10)
         self.status = "reception"
         self.pub=rospy.Publisher(NODE_NAME + '/turtlebot_status', String, queue_size=10)
     def execute(self,userdata):
         self.pub.publish(self.status)
         sub = rospy.Subscriber('client/next_goal',String, self.callback)
+        self.callback_flag = 0
         while(self.callback_flag == 0):
             self.r.sleep()
-        self.callback_flag =0
         return self.next_goal
         
     def callback(self,msg):
@@ -94,15 +94,15 @@ class WaitStartFlag(State):
     def __init__(self,status):
         State.__init__(self,outcomes=['success'])
         self.status = status
-        self.callback_flag= 0
-        self.r = rospy.Rate(1)
+        self.callback_flag = 0
+        self.r = rospy.Rate(10)
         self.pub=rospy.Publisher(NODE_NAME + '/turtlebot_status', String, queue_size=10)
     def execute(self,userdata):
         self.pub.publish(self.status)
         sub = rospy.Subscriber('client/start_flag',String, self.callback)
+        self.callback_flag = 0
         while(self.callback_flag == 0):
             self.r.sleep()
-        self.callback_flag =0
         return 'success'
     def callback(self,msg):
         self.callback_flag = 1
@@ -125,9 +125,9 @@ class AreaScan(State):
     def execute(self,userdata):
         self.pub.publish(self.room)
         sub = rospy.Subscriber('area_scanner/area_scan', String, self.callback)
+        self.callback_flag = 0
         while(self.callback_flag==0):
             self.r.sleep()
-        self.callback_flag = 0
         return 'success'
     def callback(self,msg):
         if(msg.data == "True"):
