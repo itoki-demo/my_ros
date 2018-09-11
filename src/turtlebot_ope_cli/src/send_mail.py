@@ -12,7 +12,7 @@ FROM_ADDRESS = 'tsukishimaturtlebot@gmail.com'
 MY_PASSWORD = 'tsukishima'
 TO_ADDRESS = 'mizutani83ha@gmail.com'
 BCC = ''
-SUBJECT = 'GmailのSMTPサーバ経由'
+SUBJECT = 'にお客様がお見えになりました。\n案内中です。'
 BODY = 'pythonでメール送信'
 
 
@@ -36,7 +36,7 @@ def send(from_addr, passwd, to_addrs, msg):
     smtpobj.close()
 
 def callback(cb_msg):
-    msg = create_message(FROM_ADDRESS, TO_ADDRESS, BCC, SUBJECT, BODY+cb_msg.data)
+    msg = create_message(FROM_ADDRESS, TO_ADDRESS, BCC, SUBJECT, cb_msg.data+BODY)
     send(FROM_ADDRESS, TO_ADDRESS, msg)
 
 if __name__ == '__main__':
