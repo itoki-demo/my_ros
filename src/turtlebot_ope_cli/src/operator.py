@@ -6,6 +6,7 @@ import actionlib
 from smach import State,StateMachine
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import String, Int32
+from std_srvs.srv import Empty
 import json
 import collections
 
@@ -63,6 +64,8 @@ class Waypoint(State):
 
     def execute(self, userdata):
         #目標地点を送信し結果待ち
+        rospy.wait_for_service('/move_base/clear_costmaps')
+        rospy.ServiceProxy('/move_base/clear_costmaps', Empty)()
         self.client.send_goal(self.goal)
         self.client.wait_for_result()
         return 'success'
