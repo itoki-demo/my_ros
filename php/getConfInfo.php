@@ -3,7 +3,7 @@
 #error_reporting(E_ALL);
 
 $b_Num = "";
-$confRec = "http://192.168.20.10/conferioAPI.php?b_Num=";
+$confRec = "http://192.168.20.42/conferioAPI.php?b_Num=";
 $rpath = "room_info.txt";
 if(isset($_GET['b_Num'])){
 	$b_Num = $_GET['b_Num'];
