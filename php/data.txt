@@ -1,1 +1,1 @@
-[{"humidity": 55.46, "temperature": 27.28, "discomfort": 75.44, "volume": 31.58, "time": "2018/09/14 02:14:38", "ultraviolet": 0.03, "co2": 548.0, "atmopressure": "1,017.8", "brightness": 0.0, "heatstrokerisk": 23.94}]
+[{"brightness": 4.0, "co2": 748.0, "heatstrokerisk": 23.59, "temperature": 27.19, "humidity": 53.01, "volume": 35.89, "ultraviolet": 0.03, "atmopressure": "1,016.6", "time": "2018/09/14 15:56:38", "discomfort": 75.01}]

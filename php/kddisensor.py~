@@ -2,17 +2,21 @@
 #coding:UTF-8
 import requests, json
 from datetime import datetime,timedelta
+from datetime import datetime as dt
+import time
 import csv
 import sys
 import pandas as pd
-from matplotlib import pyplot
-import time
+import  matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as pyplot
+fig = pyplot.figure()
 import numpy as np
-from datetime import datetime as dt
+
 
 def kddiapi():
     now=datetime.now()
-    before=now+timedelta(minutes=-60)
+    before=now+timedelta(minutes=-20)
     url = "http://logger.m2m-cloud-std.kddi.ne.jp/v1.0/data/regular"
     method = "POST"
     obj = {
@@ -30,6 +34,7 @@ def kddiapi():
     "Content-Type" : "application/json",
     "Accept":"text/csv"}
 
+    
     r = requests.post(url=url, data=json_data, headers=headers)
     f=open('kddidata.txt','w')
     f.write(r.text)
@@ -55,6 +60,8 @@ def tojson():
     discomfort=[]
     heatstrokerisk=[]
     co2=[]
+  
+    
     for i in range(len(df)):
         data.append('value')
         time.append(df.iloc[i,3])
@@ -67,12 +74,9 @@ def tojson():
         discomfort.append(df.iloc[i,10])
         heatstrokerisk.append(df.iloc[i,11])
         co2.append(df.iloc[i,12])
-
-    # df2 = pd.DataFrame({'time':time,'humidity': humidity, 'temperature':temperature,'brightness':brightness,'ultraviolet':ultraviolet,'atmopressure':atmopressure,'volume':volume,'discomfort':discomfort,'heatstrokerisk':heatstrokerisk,'co2':co2},index=data)
-    # print(df2)
-    # path='./tojson.json'
-    # df2.to_json(path,orient='records')
     
+    global nowtime,nowhumidity,nowtemperature,nowbrightness,nowultraviolet,nowatmopressure,nowvolume,nowdiscomfort,nowheatstrokerisk,nowco
+
     for i in(reversed(co2)):
         if i == i:
             nowco2=i
@@ -226,9 +230,9 @@ if __name__=='__main__':
     interval=700
     while True:
         kddiapi()
-        transcsv()
-        tojson()
-        tophp()
+       # transcsv()
+        #tojson()
+        #tophp()
         #pic()
         time.sleep(interval)
 
