@@ -8,6 +8,6 @@ if(file_exists($fpath)){
 }
 echo $json;
 
-$conf_init = "http://192.168.20.42/update_conf_info.php"
-file_get_contents($conf_init)
+$conf_init = "http://192.168.20.42/update_conf_info.php";
+file_get_contents($conf_init);
 ?>
