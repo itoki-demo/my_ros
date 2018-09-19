@@ -4,7 +4,9 @@
 $fpath = 'conf_info.json';
 if(file_exists($fpath)){
  $json = file_get_contents($fpath);
- $json = mb_convert_encoding($json, 'UTF8', 'ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN');
+ $json = json_decode($json);
+ $json = json_encode($json, JSON_UNESCAPED_UNICODE);
+
 }
 echo $json;
 
