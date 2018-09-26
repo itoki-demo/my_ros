@@ -1,0 +1,3 @@
+<launch>
+  <node name="smartswitch" pkg="smartswitch" type="smartswitch.py" output="screen"/>
+</launch>

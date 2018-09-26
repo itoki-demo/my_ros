@@ -1,0 +1,3 @@
+<launch>
+  <node name="send_mail" pkg="icclab_turtlebot" type="send_mail.py" args="$(find icclab_turtlebot)/src/send_mail.py" output="screen"/>
+</launch>

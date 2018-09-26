@@ -13,7 +13,7 @@ FROM_ADDRESS = 'tsukishimaturtlebot@gmail.com'
 MY_PASSWORD = 'tsukishima'
 TO_ADDRESS = 'mizutani83ha@gmail.com'
 BCC = ''
-SUBJECT = 'にお客様がお見えになりました。\n案内中です。'
+SUBJECT = 'A visiter came.'
 BODY = 'pythonでメール送信'
 
 
@@ -38,8 +38,9 @@ def send(from_addr, passwd, to_addrs, msg):
 
 def callback(cb_msg):
     to_addr = cb_msg.b_Address
-    msg = create_message(FROM_ADDRESS, to_addr, BCC, SUBJECT, cb_msg.b_RoomName+cb_msg.b_StartTime)
-    send(FROM_ADDRESS, TO_ADDRESS, msg)
+    body = "Conference will start in "+cb_msg.b_RoomName+" at "+cb_msg.b_StartTime+"."
+    msg = create_message(FROM_ADDRESS, to_addr, BCC, SUBJECT, body)
+    send(FROM_ADDRESS, MY_PASSWORD, to_addr, msg)
 
 if __name__ == '__main__':
     rospy.init_node(NODE_NAME)
