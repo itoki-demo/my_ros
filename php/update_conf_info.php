@@ -1,6 +1,6 @@
 <?php
 $file = "conf_info.json";
-$key_array = array('b_Num','b_ID','b_Name','b_RoomName','b_Date','b_StartTime','b_FinishTime');
+$key_array = array('b_Num','b_ID','b_Name','b_RoomName','b_Date','b_StartTime','b_FinishTime','b_Address');
 $data_json = array();
 foreach($key_array as $key){
  $data_json += array($key=>$_GET[$key]);
