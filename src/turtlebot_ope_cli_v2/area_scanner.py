@@ -11,15 +11,16 @@ from visualization_msgs.msg import MarkerArray, Marker
 from std_msgs.msg import Int32, String
 from actionlib_msgs.msg import GoalStatusArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
+from nav_msgs.msg import OccupancyGrid
 import math
 import numpy as np
 
 
 #scan_area = [[min_x, min_y], [max_x, max_y]]
 EMPTY_AREA = np.array([[0.0, 0.0],
-                         [0.0, 0.0]])
-ROOM01 = np.array([[-9.5, -0.2],
-                   [-8.2, 0.1]])
+                       [0.0, 0.0]])
+ROOM01 = np.array([[-9.2, -0.15],
+                   [-8.5, 0.05]])
 TEST = np.array([[-1.0, -1.0],
                  [0.0, 0.0]])
 TEST2 = np.array([[-4.0, -1.0],
@@ -176,6 +177,8 @@ class Function(object):
         self.rot = 0
         self.status = GoalStatusArray()
         self.goal = MoveBaseActionGoal()
+        self.map = OccupancyGrid()
+        self.reshaped_map = np.zeros(0, dtype='int')
 
     # /scanトピックをmap座標に変換したリストを作成
     def _get_point_list(self, scan_msg):
@@ -212,6 +215,14 @@ class Function(object):
     def set_goal(self, goal_msg):
         self.goal = goal_msg
 
+    def set_map(self, map_msg):
+        if len(self.reshaped_map) == 0:
+            self.map = map_msg
+            self._reshape_map()
+
+    def _reshape_map(self):
+        self.reshaped_map = np.array(self.map.data).reshape((self.map.info.height, self.map.info.width)).T
+
     @staticmethod
     def _vec_to_euler(x, y, scular):
         s = math.acos(x/scular)
@@ -247,13 +258,17 @@ class DynamicGoalUpdateFunc(Function):
         self.goal_radius = 1.0
         # 2次元ガウス関数マップ(g_widthは絶対に奇数)
         self.g_width = 9
-        self.g_map = np.zeros((self.g_width, self.g_width), dtype='float')
-        self._get_2d_gaussian(self.g_width)
+        self.g_map = self._get_2d_gaussian(self.g_width, 3.0)
+        self.g_map2 = self._get_2d_gaussian(self.g_width, 1.0)
         # 2次元配列格子の数を設定
-        self.xy = int(math.ceil(self.goal_radius*2 * self.units_len)) + self.g_width
+        self.xy = int(math.ceil(self.goal_radius*2*self.units_len) + math.floor(self.g_width*1.0/2)*2) + 1
         self.obs_map = np.zeros((self.xy, self.xy), dtype='float')
         self.ind_list = np.zeros((2, 0), dtype='int')
-        self.threshold = 1.0e-05
+        self.cost_threshold = 1.0e-05
+        self.movement_threshold = 0.0
+        self.m_t_increment = 0.02
+        self.wait_count = 0
+        self.update_count = 0
         
     def run(self, scan_msg):
         l = len(self.status.status_list)
@@ -266,16 +281,31 @@ class DynamicGoalUpdateFunc(Function):
                 if self._get_point_list(scan_msg):
                     # ゴール周辺の障害物情報配列を取得
                     self._get_map_index()
-                    # ゴールポイント上のコスト計算
-                    if self._get_goal_cost():
-                        self._copy_goal()
-                        # ゴールポイント更新
-                        self._update_goal()
+                    if self.update_count < 3:
+                        # ゴールポイント上のコスト計算
+                        if self._get_goal_cost():
+                            self._copy_goal()
+                            # ゴールポイント更新
+                            if self._update_goal():
+                                self.update_count += 1
+                    else:
+                        # 3回更新したら数秒更新しない
+                        if self.wait_count < 50:
+                            if self.wait_count == 1:
+                                rospy.loginfo("wait updating")
+                            self.wait_count += 1
+                        else:
+                            self.wait_count = 0
+                            self.update_count = 0
+                            rospy.loginfo("restart updating")
             elif self.status.status_list[l-1].status == 3:
                 if self.previous_status != 3:
                     # ゴールしたらnext_goalは初期化
                     self.next_goal = MoveBaseGoal()
-                    rospy.loginfo("dynamic goal updating stoped")
+                    self.wait_count = 0
+                    self.update_count = 0
+                    self.movement_threshold = 0.0
+                    rospy.loginfo("dynamic goal updating stopped")
             else:
                 pass
             # 直前のgoal_statusを記録 goal_statusの変化を判断できるようにする
@@ -284,31 +314,88 @@ class DynamicGoalUpdateFunc(Function):
     def _update_goal(self):
         costmap = np.zeros((self.xy, self.xy), dtype='float') + 1.0
         for n in range(len(self.ind_list[0])):
-            min_x = int(self.ind_list[0, n] - math.floor(self.g_width/2))
-            min_y = int(self.ind_list[1, n] - math.floor(self.g_width/2))
-            max_x = int(self.ind_list[0, n] + math.floor(self.g_width/2)) + 1
-            max_y = int(self.ind_list[1, n] + math.floor(self.g_width/2)) + 1
+            min_x, max_x, min_y, max_y = self._get_index(self.ind_list[0, n], self.ind_list[1, n], self.g_width)
             costmap[min_x:max_x, min_y:max_y] *= (1.0 - self.g_map)
-            #costmap[min_x:max_x, min_y:max_y] -= self.g_map
-        distance = np.zeros((self.xy, self.xy), dtype='float')
-        xy0 = math.floor(self.xy/2)
-        for x in range(self.xy):
-            for y in range(self.xy):
-                distance[x, y] = math.sqrt((x-xy0)**2+(y-xy0)**2)/(self.xy*10)
+        gr_size = int(math.ceil(self.goal_radius*2*self.units_len)) + 1
+        gr_map =  (self._get_ground_map(self.xy,
+                                        self.next_goal.target_pose.pose.position.x,
+                                        self.next_goal.target_pose.pose.position.y) == 0)
+        for x in range(int(math.floor(self.g_width*1.0/2)), int(gr_size+math.floor(self.g_width*1.0/2))):
+            for y in range(int(math.floor(self.g_width*1.0/2)), int(gr_size+math.floor(self.g_width*1.0/2))):
+                if gr_map[x, y] == 0:
+                    min_x, max_x, min_y, max_y = self._get_index(x, y, self.g_width)
+                    costmap[min_x:max_x, min_y:max_y] *= (1.0 - self.g_map2)
+        d_map = 1.0 - self._get_euclidean_distance(self.xy, 300)
         s_map = self._get_slope_map(self.xy,
                                     self.pos[0] - self.next_goal.target_pose.pose.position.x,
                                     self.pos[1] - self.next_goal.target_pose.pose.position.y,
-                                    p_flat=True)
-        costmap *= s_map + 1.0
-        costmap *= 1.0 - distance
-        #costmap *= (costmap >= self.threshold).astype('int')
+                                    p_flat=True) + 1.0
+        costmap *= s_map * d_map
         max_ind = [np.where(costmap==np.max(costmap))[0][0], np.where(costmap==np.max(costmap))[1][0]]
-        self.next_goal.target_pose.pose.position.x += ((max_ind[0]-self.xy/2)*1.0)/self.units_len
-        self.next_goal.target_pose.pose.position.y += ((max_ind[1]-self.xy/2)*1.0)/self.units_len
-        self.client.send_goal(self.next_goal)
-        self.previous_status = 0
-        rospy.loginfo("update goal")
+        dx = ((max_ind[0]-self.xy*1.0/2))*1.1/self.units_len
+        dy = ((max_ind[1]-self.xy*1.0/2))*1.1/self.units_len
+        # ゴール移動量が微量の場合は更新しない
+        if abs(dx) > self.movement_threshold or abs(dy) > self.movement_threshold:
+            self.next_goal.target_pose.pose.position.x += ((max_ind[0]-self.xy*1.0/2))*1.1/self.units_len
+            self.next_goal.target_pose.pose.position.y += ((max_ind[1]-self.xy*1.0/2))*1.1/self.units_len
+            self.client.send_goal(self.next_goal)
+            rospy.loginfo("update goal --> delta_x: " + str(dx) + "  delta_y: " + str(dy))
+            self.movement_threshold += self.m_t_increment
+            r = True
+        # 更新しない場合、条件を少しずつ緩和する
+        else:
+            self.movement_threshold -= self.m_t_increment * 0.1
+            r = False
+        return r
+        
+    def _copy_goal(self):
+        self.next_goal = MoveBaseGoal()
+        self.next_goal.target_pose.header.frame_id = 'map'
+        self.next_goal.target_pose.pose.position.x = self.goal.goal.target_pose.pose.position.x
+        self.next_goal.target_pose.pose.position.y = self.goal.goal.target_pose.pose.position.y
+        self.next_goal.target_pose.pose.position.z = self.goal.goal.target_pose.pose.position.z
+        self.next_goal.target_pose.pose.orientation.x = self.goal.goal.target_pose.pose.orientation.x
+        self.next_goal.target_pose.pose.orientation.y = self.goal.goal.target_pose.pose.orientation.y
+        self.next_goal.target_pose.pose.orientation.z = self.goal.goal.target_pose.pose.orientation.z
+        self.next_goal.target_pose.pose.orientation.w = self.goal.goal.target_pose.pose.orientation.w
 
+    # 現在のゴール地点の障害物コスト計算
+    def _get_goal_cost(self):
+        r = False
+        min_xy = int(math.floor(self.xy/2) - math.floor(self.g_width*1.0/2))
+        max_xy = int(math.floor(self.xy/2) + math.ceil(self.g_width*1.0/2))
+        t_costmap = self.obs_map[min_xy:max_xy, min_xy:max_xy] * self.g_map
+        if np.sum(t_costmap) > self.cost_threshold:
+            r = True
+        # move_base用マップ上の立ち入り禁止区域付近かどうかを判定
+        gr_map = (self._get_ground_map(self.g_width,
+                                       self.goal.goal.target_pose.pose.position.x,
+                                       self.goal.goal.target_pose.pose.position.y) != 0).astype('int')
+        if np.sum(gr_map) > 0:
+            r = True
+        return r
+
+    def _get_map_index(self):
+        self.obs_map = np.zeros((self.xy, self.xy), dtype='float')
+        self.ind_list = np.zeros((2, 0), dtype='int')
+        # obs_mapをscanポイントで塗りつぶす（obs_mapのある格子にscanポイントがある場合、1とする）、インデックスを取得
+        i = self._get_index(self.goal.goal.target_pose.pose.position.x,
+                            self.goal.goal.target_pose.pose.position.y, 
+                            self.goal_radius * 2)
+        min_x = self.goal.goal.target_pose.pose.position.x - self.goal_radius
+        min_y = self.goal.goal.target_pose.pose.position.y - self.goal_radius
+        max_x = self.goal.goal.target_pose.pose.position.x + self.goal_radius
+        max_y = self.goal.goal.target_pose.pose.position.y + self.goal_radius
+        for n in range(len(self.x_list)):
+            if min_x < self.x_list[n] < max_x and min_y < self.y_list[n] < max_y:
+                cell_x = int(math.floor((self.x_list[n]-min_x)*self.units_len) + math.floor(self.g_width*1.0/2))
+                cell_y = int(math.floor((self.y_list[n]-min_y)*self.units_len) + math.floor(self.g_width*1.0/2))
+                if self.obs_map[cell_x, cell_y] == 0:
+                    self.ind_list = np.hstack((self.ind_list, [[cell_x], [cell_y]]))
+                    self.obs_map[self.ind_list[0, len(self.ind_list[0])-1],
+                                 self.ind_list[1, len(self.ind_list[0])-1]] = 1
+
+    # ベクトルの方向に向かって高くなる坂のマップ n_flatは負の値を全て0とし、p_flatは正の値を全て0とする
     @staticmethod
     def _get_slope_map(size, vx=1, vy=0, n_flat=False, p_flat=False):
         n = 1
@@ -329,50 +416,43 @@ class DynamicGoalUpdateFunc(Function):
                     distance *= n
                 s_map[x+int(math.floor(size*1.0/2)), y+int(math.floor(size*1.0/2))] = round(distance, 10)
         return s_map
-        
-    def _copy_goal(self):
-        self.next_goal = MoveBaseGoal()
-        self.next_goal.target_pose.header.frame_id = 'map'
-        self.next_goal.target_pose.pose.position.x = self.goal.goal.target_pose.pose.position.x
-        self.next_goal.target_pose.pose.position.y = self.goal.goal.target_pose.pose.position.y
-        self.next_goal.target_pose.pose.position.z = self.goal.goal.target_pose.pose.position.z
-        self.next_goal.target_pose.pose.orientation.x = self.goal.goal.target_pose.pose.orientation.x
-        self.next_goal.target_pose.pose.orientation.y = self.goal.goal.target_pose.pose.orientation.y
-        self.next_goal.target_pose.pose.orientation.z = self.goal.goal.target_pose.pose.orientation.z
-        self.next_goal.target_pose.pose.orientation.w = self.goal.goal.target_pose.pose.orientation.w
 
-    def _get_goal_cost(self):
-        r = False
-        min_xy = int(math.floor(self.xy/2) - math.floor(self.g_width/2))
-        max_xy = int(math.floor(self.xy/2) + math.floor(self.g_width/2)) + 1
-        t_costmap = self.obs_map[min_xy:max_xy, min_xy:max_xy] * self.g_map
-        if np.sum(t_costmap) > self.threshold:
-            r = True
-        return r
-
-    def _get_map_index(self):
-        self.obs_map = np.zeros((self.xy, self.xy), dtype='float')
-        self.ind_list = np.zeros((2, 0), dtype='int')
-        # obs_mapをscanポイントで塗りつぶす（obs_mapのある格子にscanポイントがある場合、1とする）、インデックスを取得
-        min_x = self.goal.goal.target_pose.pose.position.x - self.goal_radius
-        min_y = self.goal.goal.target_pose.pose.position.y - self.goal_radius
-        max_x = self.goal.goal.target_pose.pose.position.x + self.goal_radius
-        max_y = self.goal.goal.target_pose.pose.position.y + self.goal_radius
-        for n in range(len(self.x_list)):
-            if min_x < self.x_list[n] < max_x and min_y < self.y_list[n] < max_y:
-                cell_x = int(math.floor((self.x_list[n] - min_x)*self.units_len) + math.floor(self.g_width/2))
-                cell_y = int(math.floor((self.y_list[n] - min_y)*self.units_len) + math.floor(self.g_width/2))
-                if self.obs_map[cell_x, cell_y] == 0:
-                    self.ind_list = np.hstack((self.ind_list, [[cell_x], [cell_y]]))
-                    self.obs_map[self.ind_list[0, len(self.ind_list[0])-1],
-                                 self.ind_list[1, len(self.ind_list[0])-1]] = 1
-
-    def _get_2d_gaussian(self, w, r=3.0):
+    # ２次元ガウス関数マップ
+    @staticmethod
+    def _get_2d_gaussian(w, r=3.0):
+        g_map = np.zeros((w, w), dtype='float')
         x0 = math.floor(w/2)
         y0 = x0
         for x in range(w):
             for y in range(w):
-                self.g_map[x, y] = math.exp(-(((x-x0)/(r*2))**2+((y-y0)/(r*2))**2))
+                g_map[x, y] = math.exp(-(((x-x0)/(r*2))**2+((y-y0)/(r*2))**2))
+        return g_map
+
+    # 中心からのユークリッド距離マップ rで距離の倍率を変える
+    @staticmethod
+    def _get_euclidean_distance(w, r=1):
+        distance = np.zeros((w, w), dtype='float')
+        xy0 = math.floor(w/2)
+        for x in range(w):
+            for y in range(w):
+                distance[x, y] = math.sqrt((x-xy0)**2+(y-xy0)**2)/r
+        return distance
+
+    # 地図情報を切り取ったマップ
+    def _get_ground_map(self, w, x, y, resolution=0.05):
+        x0 = -self.map.info.origin.position.x / resolution
+        y0 = -self.map.info.origin.position.y / resolution
+        min_x, max_x, min_y, max_y = self._get_index(math.floor(x/resolution+x0), math.floor(y/resolution+y0), w)
+        gr_map = self.reshaped_map[min_x:max_x, min_y:max_y]
+        return gr_map
+
+    @staticmethod
+    def _get_index(x, y, w):
+        min_x = int(x - math.floor(w*1.0/2))
+        min_y = int(y - math.floor(w*1.0/2))
+        max_x = int(x + math.ceil(w*1.0/2))
+        max_y = int(y + math.ceil(w*1.0/2))
+        return min_x, max_x, min_y, max_y
 
 
 # 障害物有無判定funcクラス _check関数で判定の条件を記述
@@ -408,7 +488,7 @@ class CheckObsFunc(Function):
     # 障害物がないと判定する条件
     def _check(self, obs_num):
         r = False
-        if obs_num == 0:
+        if obs_num < 4:
             self.check_count += 1
         else:
             self.check_count = 0
@@ -503,7 +583,7 @@ class VisionCheckFunc(Function):
     # 障害物がないと判定する条件
     def _check(self, obs_num):
         r = False
-        if obs_num == 0:
+        if obs_num < 4:
             self.check_count += 1
         else:
             self.check_count = 0
@@ -585,6 +665,7 @@ class AreaScaner(object):
         rospy.Subscriber("/scan", LaserScan, self._scan_cb)
         rospy.Subscriber("/move_base/status", GoalStatusArray, self._update_status)
         rospy.Subscriber("/move_base/goal", MoveBaseActionGoal, self._update_goal)
+        rospy.Subscriber("/map_movebase", OccupancyGrid, self._update_map)
         rospy.spin()
     
     # /scanの内容をfuncに送り続け、都度終了条件を満たしたか確認する
@@ -626,6 +707,10 @@ class AreaScaner(object):
     def _update_goal(self, goal_msg):
         for task in self.cb_task:
             task.set_goal(goal_msg)
+
+    def _update_map(self, map_msg):
+        for task in self.cb_task:
+            task.set_map(map_msg)
 
 
 # 実行例
