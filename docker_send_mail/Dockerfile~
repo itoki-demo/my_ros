@@ -39,18 +39,15 @@ RUN apt-get update && apt-get install -y \
 # send_mail source pull from github
 RUN git clone https://github.com/ayato-mizutani/send_mail.git
 
-# add user ros
-RUN adduser --gecos "ROS User" --disabled-password ros
-RUN usermod -a -G dialout ros
-USER ros
-RUN HOME=/home/ros rosdep update
-
 # create catkin_ws
-RUN mkdir -p /home/ros/catkin_ws/src
-RUN /bin/bash -c ". /opt/ros/kinetic/setup.bash; catkin_init_workspace /home/ros/catkin_ws/src"
-RUN cp -r /send_mail/* /home/ros/catkin_ws/src/
-RUN /bin/bash -c ". /opt/ros/kinetic/setup.bash; cd /home/ros/catkin_ws; catkin_make"
-
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash"
+RUN mkdir -p catkin_ws/src
+RUN cd catkin_ws/src
+RUN /bin/bash -c "catkin_init_workspace"
+RUN cp -r ../../send_mail/* ./
+RUN cd ..
+RUN catkin_make
+RUN /bin/bash -c "source catkin_ws/devel/setup.bash"
 
 # setup entrypoint
 COPY ./ros_entrypoint.sh /

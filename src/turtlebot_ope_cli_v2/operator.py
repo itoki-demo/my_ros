@@ -14,15 +14,10 @@ from conferio_msgs.msg import Conferio
 import roslib; roslib.load_manifest('kobuki_auto_docking')
 from kobuki_msgs.msg import AutoDockingAction, AutoDockingGoal
 from actionlib_msgs.msg import GoalStatus
+import sys,os
 
 NODE_NAME = "operator"
-#目標地点リスト　名前, 座標, 向き jsonファイルで読み込み
-decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
-room_waypoints_jsonfile_path = "/home/a-mizutani/workspace/src/icclab_turtlebot/maps/modified_lobby_waypoints.json"#"/home/turtlebot/catkin_ws/src/icclab_turtlebot/maps/modified_lobby_waypoints.json"
-with open(room_waypoints_jsonfile_path) as f:
-    df = decoder.decode(f.read())
-initial_point = df["initial_point"]
-room_waypoints = df["room_waypoints"]
+
 
 #room_waypoints = {
 #    "Room01":[["door_key_1", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, 0.988802450802)],
@@ -39,10 +34,6 @@ room_waypoints = df["room_waypoints"]
 #    ["Room02", (2.9, 0.0), (0.0, 0.0, 0.974797896522, 0.223089804646)],
 #    ["Room03", (-1.09, 2.48), (0.0, 0.0, -0.739811508606, 0.672814188119)]
 #]
-#waypointsから目標地点名のみ抽出
-room_names = []
-for w in room_waypoints:
-    room_names.append(w)
 
 class Waypoint(State):
     def __init__(self, position, orientation):
@@ -73,8 +64,9 @@ class Waypoint(State):
 
 #次の目標地点名の受信待ち
 class Reception(State):
-    def __init__(self):
+    def __init__(self,room_names):
         State.__init__(self,outcomes=room_names)
+        self.room_names = room_names
         self.callback_flag = 0
         self.next_goal = ''
         self.r = rospy.Rate(10)
@@ -89,7 +81,7 @@ class Reception(State):
         return self.next_goal
         
     def callback(self,msg):
-        if (msg.b_RoomName in room_names):
+        if (msg.b_RoomName in self.room_names):
             self.next_goal = msg.b_RoomName
             self.callback_flag = 1
 
@@ -154,8 +146,19 @@ class AutoDock(State):
 
 
 class Operator:
-    def __init__(self):
+    def __init__(self, r_w_j_p):
         rospy.init_node(NODE_NAME)
+        #目標地点リスト　名前, 座標, 向き jsonファイルで読み込み
+        decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
+        room_waypoints_jsonfile_path = r_w_j_p
+        with open(room_waypoints_jsonfile_path) as f:
+            df = decoder.decode(f.read())
+        initial_point = df["initial_point"]
+        room_waypoints = df["room_waypoints"]
+        #waypointsから目標地点名のみ抽出
+        room_names = []
+        for w in room_waypoints:
+            room_names.append(w)
         self.operator = StateMachine(['success','reception','auto_dock','move_to_reception'] + room_names)
         reception_transitions={}
         for r in room_names:
@@ -168,7 +171,7 @@ class Operator:
                              transitions={'success':'reception'})
             StateMachine.add('auto_dock',AutoDock(),
                              transitions={'success':'reception'})
-            StateMachine.add('reception',Reception(),
+            StateMachine.add('reception',Reception(room_names),
                              transitions=reception_transitions)
 
             for r in room_names:
@@ -226,6 +229,20 @@ class Operator:
         return
 
 if __name__ == '__main__':
-    a = Operator()
-    a.run()
+    room_waypoints_jsonfile_path_list = ["/home/a-mizutani/catkin_ws/src/icclab_turtlebot/maps/modified_lobby_waypoints.json", 
+                                         "/home/turtlebot/catkin_ws/src/icclab_turtlebot/maps/modified_lobby_waypoints.json"]
+    try:
+        room_waypoints_jsonfile_path = rospy.get_param("/operator/jsonfile_path", 'NoParam')
+        if room_waypoints_jsonfile_path == 'NoParam':
+            for fp in room_waypoints_jsonfile_path_list:
+                if os.path.isfile(fp):
+                    print("notarg "+room_waypoints_jsonfile_path)
+                    room_waypoints_jsonfile_path = fp
+                    break
+        a = Operator(room_waypoints_jsonfile_path)
+        a.run()
+    except:
+        rospy.loginfo("No such json file")
+
+
 
