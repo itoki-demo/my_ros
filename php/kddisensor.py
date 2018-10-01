@@ -2,8 +2,6 @@
 #coding:UTF-8
 import requests, json
 from datetime import datetime,timedelta
-from datetime import datetime as dt
-import time
 import csv
 import sys
 import pandas as pd
@@ -11,8 +9,9 @@ import  matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as pyplot
 fig = pyplot.figure()
+import time
 import numpy as np
-
+from datetime import datetime as dt
 
 def kddiapi():
     now=datetime.now()
@@ -34,7 +33,6 @@ def kddiapi():
     "Content-Type" : "application/json",
     "Accept":"text/csv"}
 
-    
     r = requests.post(url=url, data=json_data, headers=headers)
     f=open('kddidata.txt','w')
     f.write(r.text)
@@ -233,7 +231,7 @@ if __name__=='__main__':
         transcsv()
         #tojson()
         tophp()
-        #pic()
+        pic()
         time.sleep(interval)
 
 
