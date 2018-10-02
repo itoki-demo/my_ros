@@ -250,11 +250,11 @@ def pic():
 if __name__=='__main__':
     interval=700
     while True:
-       # kddiapi()
-        #transcsv()
-        tojson()
-        #tophp()
-       # pic()
+        kddiapi()
+        transcsv()
+        #tojson()
+        tophp()
+        #pic()
         time.sleep(interval)
 
 
