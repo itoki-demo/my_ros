@@ -111,10 +111,10 @@ def tojson():
     pyplot.rcParams['font.family'] = font_prop.get_name()
     p1=pyplot.bar(1, nowco,width=0.8,color='green')
     pyplot.plot([0,2],[2000,2000],"red",linestyle='dashed')
-    pyplot.annotate('現在co2濃度',xy=(1,nowco+10),xytext=(1.2,nowco+100),arrowprops=dict(shrink=0.1))
-    pyplot.annotate('co2濃度警戒線',xy=(1,2000-10),xytext=(1.2,2000-100),arrowprops=dict(shrink=0.1))
+    pyplot.annotate(u'現在co2濃度',xy=(1,nowco+10),xytext=(1.2,nowco+100),arrowprops=dict(shrink=0.1))
+    pyplot.annotate(u'co2濃度警戒線',xy=(1,2000-10),xytext=(1.2,2000-100),arrowprops=dict(shrink=0.1))
     pyplot.savefig('kddifigure1.png')
-    
+
 
     # def make_patch_spines_invisible(ax):
     #     ax.set_frame_on(True)

@@ -12,6 +12,8 @@ fig = pyplot.figure()
 import time
 import numpy as np
 from datetime import datetime as dt
+from matplotlib.font_manager import FontProperties
+
 
 def kddiapi():
     now=datetime.now()
@@ -96,95 +98,116 @@ def tojson():
     nowheatstrokerisk=heatstrokerisk[nownum]
     nowco=nowco2
 
-    #date draw
-    for i in time:
-        time_i.append(dt.strptime(i,'%Y/%m/%d %H:%M:%S'))
 
-    time_j=[]
-    for i in time_i:
-        time_j.append('{}:{}'.format(i.hour,i.minute))
+
+
+    font_path = '/usr/share/fonts/truetype/takao-gothic/TakaoPGothic.ttf'
+    font_prop = FontProperties(fname=font_path)
+    pyplot.rcParams['font.family'] = font_prop.get_name()
+    pyplot.subplot(121)
+    pyplot.title('CO2 concentration')
+    p1=pyplot.bar(1, nowco,width=0.8,color='green')
+    pyplot.plot([0,2],[2000,2000],"red",linestyle='dashed')
+    pyplot.annotate('現在co2濃度',xy=(1,nowco+10),xytext=(1.2,nowco+300),arrowprops=dict(shrink=0.1))
+    pyplot.annotate('co2濃度警戒線',xy=(1,2000-10),xytext=(1.2,2000-300),arrowprops=dict(shrink=0.1))
+    pyplot.subplot(122)
+    pyplot.title('Discomfort index')
+    pyplot.ylim(50,80)
+    p2=pyplot.bar(1, nowdiscomfort,width=0.8,color='blue')
+    pyplot.plot([0,2],[75,75],"red",linestyle='dashed')
+    pyplot.plot([0,2],[60,60],"red",linestyle='dashed')
+    pyplot.annotate('不快指数警戒線',xy=(1,75+1),xytext=(1.2,75+3),arrowprops=dict(shrink=0.1))
+    pyplot.annotate('不快指数警戒線',xy=(1,60-1),xytext=(1.2,60-3),arrowprops=dict(shrink=0.1))
+    #pyplot.savefig('kddifigure.png')
+    # #date draw
+    # for i in time:
+    #     time_i.append(dt.strptime(i,'%Y/%m/%d %H:%M:%S'))
+
+    # time_j=[]
+    # for i in time_i:
+    #     time_j.append('{}:{}'.format(i.hour,i.minute))
     
 
 
-    def make_patch_spines_invisible(ax):
-        ax.set_frame_on(True)
-        ax.patch.set_visible(False)
-        for sp in ax.spines.values():
-            sp.set_visible(False)
+    # def make_patch_spines_invisible(ax):
+    #     ax.set_frame_on(True)
+    #     ax.patch.set_visible(False)
+    #     for sp in ax.spines.values():
+    #         sp.set_visible(False)
 
-    fig,host=pyplot.subplots(figsize=(20,10))
-    fig.subplots_adjust(right=0.5)
-    par1=host.twinx()
-    par2=host.twinx()
-    par3=host.twinx()
-    par4=host.twinx()
-    par5=host.twinx()
-    par6=host.twinx()
-    par7=host.twinx()
-    par8=host.twinx()
+    # fig,host=pyplot.subplots(figsize=(20,10))
+    # fig.subplots_adjust(right=0.5)
+    # par1=host.twinx()
+    # par2=host.twinx()
+    # par3=host.twinx()
+    # par4=host.twinx()
+    # par5=host.twinx()
+    # par6=host.twinx()
+    # par7=host.twinx()
+    # par8=host.twinx()
 
-    # Offset the right spine of par2.  The ticks and label have already been
-    # placed on the right by twinx above.
-    par2.spines["right"].set_position(("axes", 1.1))
-    make_patch_spines_invisible(par2)
-    par2.spines["right"].set_visible(True)
-    #
-    par3.spines["right"].set_position(("axes", 1.2))
-    make_patch_spines_invisible(par3)
-    par3.spines["right"].set_visible(True)
-    #
-    par4.spines["right"].set_position(("axes", 1.3))
-    make_patch_spines_invisible(par4)
-    par4.spines["right"].set_visible(True)
-    #
-    par5.spines["right"].set_position(("axes", 1.5))
-    make_patch_spines_invisible(par5)
-    par5.spines["right"].set_visible(True)
-    #
-    par6.spines["right"].set_position(("axes", 1.7))
-    make_patch_spines_invisible(par6)
-    par6.spines["right"].set_visible(True)
-    #
-    par7.spines["right"].set_position(("axes", 1.9))
-    make_patch_spines_invisible(par7)
-    par7.spines["right"].set_visible(True)
-    #
-    par8.spines["right"].set_position(("axes",2))
-    make_patch_spines_invisible(par8)
-    par8.spines["right"].set_visible(True)
-    #
-    p1, = host.plot(time_j,volume,'darkgreen',  label="volume")
-    p2, = par1.plot(time_j,temperature,'pink', label="Temperature",antialiased="True")
-    p3, = par2.plot(time_j,humidity, 'b',label="humidity",antialiased="True")
-    p4, = par3.plot(time_j,brightness, 'y',label="brightness",antialiased="True")
-    p5, = par4.plot(time_j,ultraviolet, 'violet',label="ultraviolet",antialiased="True")
-    p6, = par5.plot(time_j,atmopressure, 'grey',label="atmopressure",antialiased="True")
-    p7, = par6.plot(time_j,discomfort, 'peru',label="discomfort",antialiased="True")
-    p8, = par7.plot(time_j,heatstrokerisk, 'r',label="heatstrokerisk",antialiased="True")
-    p9, = par8.plot(time_j,co2, 'lightgreen',label="co2",antialiased="True")
+    # # Offset the right spine of par2.  The ticks and label have already been
+    # # placed on the right by twinx above.
+    # par2.spines["right"].set_position(("axes", 1.1))
+    # make_patch_spines_invisible(par2)
+    # par2.spines["right"].set_visible(True)
+    # #
+    # par3.spines["right"].set_position(("axes", 1.2))
+    # make_patch_spines_invisible(par3)
+    # par3.spines["right"].set_visible(True)
+    # #
+    # par4.spines["right"].set_position(("axes", 1.3))
+    # make_patch_spines_invisible(par4)
+    # par4.spines["right"].set_visible(True)
+    # #
+    # par5.spines["right"].set_position(("axes", 1.5))
+    # make_patch_spines_invisible(par5)
+    # par5.spines["right"].set_visible(True)
+    # #
+    # par6.spines["right"].set_position(("axes", 1.7))
+    # make_patch_spines_invisible(par6)
+    # par6.spines["right"].set_visible(True)
+    # #
+    # par7.spines["right"].set_position(("axes", 1.9))
+    # make_patch_spines_invisible(par7)
+    # par7.spines["right"].set_visible(True)
+    # #
+    # par8.spines["right"].set_position(("axes",2))
+    # make_patch_spines_invisible(par8)
+    # par8.spines["right"].set_visible(True)
+    # #
+    # p1, = host.plot(time_j,volume,'darkgreen',  label="volume")
+    # p2, = par1.plot(time_j,temperature,'pink', label="Temperature",antialiased="True")
+    # p3, = par2.plot(time_j,humidity, 'b',label="humidity",antialiased="True")
+    # p4, = par3.plot(time_j,brightness, 'y',label="brightness",antialiased="True")
+    # p5, = par4.plot(time_j,ultraviolet, 'violet',label="ultraviolet",antialiased="True")
+    # p6, = par5.plot(time_j,atmopressure, 'grey',label="atmopressure",antialiased="True")
+    # p7, = par6.plot(time_j,discomfort, 'peru',label="discomfort",antialiased="True")
+    # p8, = par7.plot(time_j,heatstrokerisk, 'r',label="heatstrokerisk",antialiased="True")
+    # p9, = par8.plot(time_j,co2, 'lightgreen',label="co2",antialiased="True")
 
-    host.set_xlabel("time")
-    host.set_ylabel("volume")
-    par1.set_ylabel("Temperature")
-    par2.set_ylabel("humidity")
-    par3.set_ylabel("brightness")
-    par4.set_ylabel("ultraviolet")
-    par5.set_ylabel("atmopressure")
-    par6.set_ylabel("discomfort")
-    par7.set_ylabel("heatstrokerisk")
-    par8.set_ylabel("co2")
+    # host.set_xlabel("time")
+    # host.set_ylabel("volume")
+    # par1.set_ylabel("Temperature")
+    # par2.set_ylabel("humidity")
+    # par3.set_ylabel("brightness")
+    # par4.set_ylabel("ultraviolet")
+    # par5.set_ylabel("atmopressure")
+    # par6.set_ylabel("discomfort")
+    # par7.set_ylabel("heatstrokerisk")
+    # par8.set_ylabel("co2")
 
-    tkw = dict(size=4, width=1.5)
-    host.tick_params(axis='y', colors=p1.get_color(), **tkw)
-    par1.tick_params(axis='y', colors=p2.get_color(), **tkw)
-    par2.tick_params(axis='y', colors=p3.get_color(), **tkw)
-    par3.tick_params(axis='y', colors=p4.get_color(), **tkw)
-    par4.tick_params(axis='y', colors=p5.get_color(), **tkw)
-    par5.tick_params(axis='y', colors=p6.get_color(), **tkw)
-    par6.tick_params(axis='y', colors=p7.get_color(), **tkw)
-    par7.tick_params(axis='y', colors=p8.get_color(), **tkw)
-    par8.tick_params(axis='y', colors=p9.get_color(), **tkw)
-    host.tick_params(axis='x',labelsize=8,**tkw)
+    # tkw = dict(size=4, width=1.5)
+    # host.tick_params(axis='y', colors=p1.get_color(), **tkw)
+    # par1.tick_params(axis='y', colors=p2.get_color(), **tkw)
+    # par2.tick_params(axis='y', colors=p3.get_color(), **tkw)
+    # par3.tick_params(axis='y', colors=p4.get_color(), **tkw)
+    # par4.tick_params(axis='y', colors=p5.get_color(), **tkw)
+    # par5.tick_params(axis='y', colors=p6.get_color(), **tkw)
+    # par6.tick_params(axis='y', colors=p7.get_color(), **tkw)
+    # par7.tick_params(axis='y', colors=p8.get_color(), **tkw)
+    # par8.tick_params(axis='y', colors=p9.get_color(), **tkw)
+    # host.tick_params(axis='x',labelsize=8,**tkw)
 
     pyplot.savefig('kddifigure.png')
 
@@ -227,11 +250,11 @@ def pic():
 if __name__=='__main__':
     interval=700
     while True:
-        kddiapi()
-        transcsv()
-        #tojson()
-        tophp()
-        pic()
+       # kddiapi()
+        #transcsv()
+        tojson()
+        #tophp()
+       # pic()
         time.sleep(interval)
 
 

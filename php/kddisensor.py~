@@ -231,7 +231,7 @@ if __name__=='__main__':
         transcsv()
         #tojson()
         tophp()
-        #pic()
+        pic()
         time.sleep(interval)
 
 
