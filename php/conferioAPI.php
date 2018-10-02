@@ -16,7 +16,11 @@ $data_array = array();
 
 foreach($lines as $line){
  $list = preg_split("/,/", $line);
+<<<<<<< HEAD
+ $data = array('b_Num'=> $list[0], 'b_ID'=> $list[1], 'b_Name'=> $list[2], 'b_RoomName'=> $list[3],'b_Date'=> $list[4], 'b_StartTime'=> $list[5], 'b_FinishTime'=> $list[6], 'b_Address'=> $list[7]);
+=======
  $data = array('b_Num'=> $list[0], 'b_ID'=> $list[1], 'b_Name'=> $list[2], 'b_RoomName'=> $list[3],'b_Date'=> $list[4], 'b_StartTime'=> $list[5], 'b_FinishTime'=> $list[6], 'b_Address'=> trim($list[7]));
+>>>>>>> 908d23070bf1fa011f3a0a236be874a9a9596211
  $data_json[] = json_encode($data);
 };
 

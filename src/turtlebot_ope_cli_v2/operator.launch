@@ -1,0 +1,6 @@
+<launch>
+  <arg name="jsonfile_path" default="/home/a-mizutani/catkin_ws/src/icclab_turtlebot/maps/modified_lobby_waypoints.json"/>
+  <node name="operator" pkg="icclab_turtlebot" type="operator.py" args="$(find icclab_turtlebot)/src/operator.py" output="screen">
+  　　<param name="jsonfile_path" type="string" value="$(arg jsonfile_path)"/> 
+  </node>
+</launch>
