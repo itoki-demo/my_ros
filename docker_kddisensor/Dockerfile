@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -q -y \
     dirmngr \
     gnupg2 \
     lsb-release \
+    fonts-takao-pgothic \
     && rm -rf /var/lib/apt/lists/*
 
 # setup keys
@@ -43,7 +44,7 @@ RUN pip3 install requests==2.9.1 \
     matplotlib==2.2.3
 
 # send_mail source pull from github
-RUN git clone https://github.com/ayato-mizutani/send_mail.git
+RUN git clone https://github.com/ayato-mizutani/kddisensor
 
 # add user ros
 RUN adduser --gecos "ROS User" --disabled-password ros
@@ -54,7 +55,7 @@ RUN HOME=/home/ros rosdep update
 # create catkin_ws
 RUN mkdir -p /home/ros/catkin_ws/src
 RUN /bin/bash -c ". /opt/ros/kinetic/setup.bash; catkin_init_workspace /home/ros/catkin_ws/src"
-RUN cp -r /send_mail/* /home/ros/catkin_ws/src/
+RUN cp -r /kddisensor/* /home/ros/catkin_ws/src/
 RUN /bin/bash -c ". /opt/ros/kinetic/setup.bash; cd /home/ros/catkin_ws; catkin_make"
 
 USER root
