@@ -2,6 +2,9 @@
 # generated from docker_images/create_ros_core_image.Dockerfile.em
 FROM ubuntu:xenial
 
+# system time zone change to japan
+RUN ln -sf  /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+
 # install packages
 RUN apt-get update && apt-get install -q -y \
     dirmngr \

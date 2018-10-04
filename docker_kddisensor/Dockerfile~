@@ -44,7 +44,7 @@ RUN pip3 install requests==2.9.1 \
     matplotlib==2.2.3
 
 # send_mail source pull from github
-RUN git clone https://github.com/ayato-mizutani/kddisensor.git
+RUN git clone https://github.com/ayato-mizutani/kddisensor
 
 # add user ros
 RUN adduser --gecos "ROS User" --disabled-password ros
