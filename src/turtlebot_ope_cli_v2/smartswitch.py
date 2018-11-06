@@ -31,13 +31,11 @@ class SmartSwitch:
         rospy.init_node(NODE_NAME)
         sub = rospy.Subscriber('/operator/turtlebot_status', String, self.callback)
         #スマートスイッチにアクセスするためのアドレス
-        host = "192.168.250.1
+        host = "192.168.250.1"
         #ポート番号
         port = 23
         #オブジェクトの作成
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-        self.client.connect((host, port))
-        self.client.send('nwk\r') #password
+#password
 
     """
     /operator/turtlebot_statusを購読したときのコールバック関数
@@ -46,6 +44,13 @@ class SmartSwitch:
     def callback(self,msg):
         turtlebot_status_list = msg.data.split("_")
         if(turtlebot_status_list[2] == "door"):
+            #スマートスイッチにアクセスするためのアドレス
+            host = "192.168.250.1"
+            #ポート番号
+            port = 23
+            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+            self.client.connect((host, port))
+            self.client.send('nwk\r') 
             self.client.send(self.switch_list[0])
 
     def run(self):
