@@ -18,7 +18,27 @@ import sys,os
 
 NODE_NAME = "operator"
 
+"""
+ROSプログラム
+ノード名operator
 
+指定された会議室まで順序をたどりながら目標地点をTurtlebotに送信する
+iPadからの入力情報をclientから受け取る
+ROSのステートマシンを使用している
+
+状態一覧
+Waypoint
+指定された目標座標へ移動するようにTurtlebotに目標座標を送信する
+Reception
+client/conf_infoのConferioの予約情報を購読待ちをし、予約情報の会議室の状態へ遷移する
+WaitStartFlag
+client/start_flagの購読待ちをする
+MoveToRoom
+指定された部屋移動を開始する状態　ここから各会議室までの座標をたどっていく
+AreaScan
+扉が開いているかどうか判断するarea_scannerからの情報を待つ
+
+"""
 #room_waypoints = {
 #    "Room01":[["door_key_1", (-1.4, -2.7), (0.0, 0.0, 0.149230403361, 0.988802450802)],
 #              ["room", ( 2.9,  0.0), (0.0, 0.0, 0.974797896522, 0.223089804646)],
@@ -62,7 +82,7 @@ class Waypoint(State):
         self.client.wait_for_result()
         return 'success'
 
-#次の目標地点名の受信待ち
+#予約情報の購読待ちをし、指定された会議室への案内状態へ遷移する
 class Reception(State):
     def __init__(self,room_names):
         State.__init__(self,outcomes=room_names)
@@ -73,13 +93,15 @@ class Reception(State):
         self.status = "reception"
         self.pub=rospy.Publisher(NODE_NAME + '/turtlebot_status', String, queue_size=10)
     def execute(self,userdata):
+        #receptionについたことを配信する
         self.pub.publish(self.status)
         sub = rospy.Subscriber('client/conf_info',Conferio, self.callback)
+        #client/conf_infoの購読待ちをする
         self.callback_flag = 0
         while(self.callback_flag == 0):
             self.r.sleep()
         return self.next_goal
-        
+    #client/conf_infoのコールバック関数　購読したらnext_goalに次の目標部屋をいれる
     def callback(self,msg):
         if (msg.b_RoomName in self.room_names):
             self.next_goal = msg.b_RoomName
@@ -94,8 +116,10 @@ class WaitStartFlag(State):
         self.r = rospy.Rate(10)
         self.pub=rospy.Publisher(NODE_NAME + '/turtlebot_status', String, queue_size=10)
     def execute(self,userdata):
+        #turtlebotの到着した場所を配信
         self.pub.publish(self.status)
         sub = rospy.Subscriber('client/start_flag',String, self.callback)
+        #iPadからの入力待ち
         self.callback_flag = 0
         while(self.callback_flag == 0):
             self.r.sleep()
@@ -119,9 +143,11 @@ class AreaScan(State):
         self.r = rospy.Rate(10)
         self.room = room
     def execute(self,userdata):
+        #area_scannerに会議室の場所を渡す
         self.pub.publish(self.room)
         sub = rospy.Subscriber('area_scanner/area_scan', String, self.callback)
         self.callback_flag = 0
+        #area_scannerの判断待ち
         while(self.callback_flag==0):
             self.r.sleep()
         return 'success'
@@ -153,16 +179,22 @@ class Operator:
         room_waypoints_jsonfile_path = r_w_j_p
         with open(room_waypoints_jsonfile_path) as f:
             df = decoder.decode(f.read())
+        #初期位置
         initial_point = df["initial_point"]
+        #目標地点リスト
         room_waypoints = df["room_waypoints"]
         #waypointsから目標地点名のみ抽出
         room_names = []
         for w in room_waypoints:
             room_names.append(w)
+        #ステートマシンの状態にreception,move_to_recepotion,roomnameなどを追加
         self.operator = StateMachine(['success','reception','auto_dock','move_to_reception'] + room_names)
+        #reception状態の遷移先を定義(各会議室)
         reception_transitions={}
         for r in room_names:
             reception_transitions[r] = r
+
+
         with self.operator:
             #受けつけ、受付まで移動状態を追加
             StateMachine.add('move_to_reception',
@@ -174,6 +206,7 @@ class Operator:
             StateMachine.add('reception',Reception(room_names),
                              transitions=reception_transitions)
 
+            #会議室までの道のりを座標名ごとに座標や状態を登録
             for r in room_names:
                 waypoints = room_waypoints[r]
                 next_move_state_names = []# [Navigate_Room01_door_key_1, Room01_room]
